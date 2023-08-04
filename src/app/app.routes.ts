@@ -3,7 +3,7 @@ import { NetherlandsMapComponent } from "./netherlands-map/netherlands-map.compo
 
 export const appRoutes: Route[] = [
     {
-        path: 'map',
+        path: '',
         component: NetherlandsMapComponent,
     }
 ];
