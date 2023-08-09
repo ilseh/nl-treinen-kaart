@@ -3,8 +3,8 @@ import * as L from 'leaflet';
 import { LatLngTuple } from 'leaflet';
 import { SpoorkaartService } from "../services/spoorkaart.service";
 import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
-import { Disruptions, DisruptionsService } from "../services/disruptions.service";
-import { BehaviorSubject, combineLatest, filter, Observable, of, tap } from "rxjs";
+import { DisruptionsService } from "../services/disruptions.service";
+import { filter } from "rxjs";
 
 @UntilDestroy()
 @Component({
@@ -18,10 +18,9 @@ export class NetherlandsMapComponent implements OnInit, OnChanges {
   @Input()
   public showStoringen: boolean | null | undefined = true;
   private map: L.Map | undefined;
-  private disruptions$: Observable<Disruptions> = of([]);
 
-  private showWerkzaaheden$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  private showStoringen$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
+  private werkzaamhedenLayers: L.Layer[] = [];
+  private storingenLayers: L.Layer[] = [];
 
   constructor(private spoorkaartService: SpoorkaartService, private disruptionService: DisruptionsService) {
   }
@@ -29,16 +28,23 @@ export class NetherlandsMapComponent implements OnInit, OnChanges {
   ngOnInit() {
     this.initMap();
     this.getSpoorkaart();
-    // this.getDisruptions();
-    this.disruptions$ = this.disruptionService.getDisruptions();
+    this.getDisruptions();
   }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['showStoringen'] && this.showStoringen != null) {
-      this.showStoringen$.next(this.showStoringen);
+      if (this.showStoringen) {
+        this.storingenLayers.forEach(layer => this.map?.addLayer(layer));
+      } else {
+        this.storingenLayers.forEach(layer => this.map?.removeLayer(layer));
+      }
     }
     if (changes['showWerkzaamheden'] && this.showWerkzaamheden != null) {
-      this.showWerkzaaheden$.next(this.showWerkzaamheden);
+      if (this.showWerkzaamheden) {
+        this.werkzaamhedenLayers.forEach(layer => this.map?.addLayer(layer));
+      } else {
+        this.werkzaamhedenLayers.forEach(layer => this.map?.removeLayer(layer));
+      }
     }
   }
 
@@ -52,16 +58,21 @@ export class NetherlandsMapComponent implements OnInit, OnChanges {
   }
 
   private getDisruptions(): void {
-    combineLatest([this.disruptions$, this.showStoringen$, this.showWerkzaaheden$])
-      .pipe(tap(test => console.log('tst', test)), untilDestroyed(this), filter(([disruptions,]) => disruptions.length > 0))
-      .subscribe(([disruptions, showStoringen, showWerkzaamheden]) => {
+    this.disruptionService.getDisruptions().pipe(untilDestroyed(this), filter(disruptions => disruptions.length > 0))
+      .subscribe(disruptions => {
         disruptions.forEach(disruption => {
-          if (disruption.type === 'WERKZAAMHEID' && !showWerkzaamheden || disruption.type === 'STORING' && !showStoringen) {
-            return;
+          if (disruption.type === 'WERKZAAMHEID') {
+            const layer = this.drawLines(disruption.coordinates, 'yellow');
+            if (layer)
+              this.werkzaamhedenLayers.push(layer);
           }
-          const color = disruption.niveau === 'MINDER_TREINEN' ? 'orange' : 'red';
-          this.drawLines(disruption.coordinates, color);
-        })
+          if (disruption.type === 'STORING') {
+            const layer = this.drawLines(disruption.coordinates, 'orange');
+            if (layer)
+              this.storingenLayers.push(layer);
+          }
+
+        });
       });
   }
 
@@ -80,12 +91,15 @@ export class NetherlandsMapComponent implements OnInit, OnChanges {
     this.map.fitBounds([[50.5, 4.4], [53.5, 5.6]]);
   }
 
-  private drawLines(coordinates: LatLngTuple[], color: string): void {
+  private drawLines(coordinates: LatLngTuple[], color: string): L.Layer | undefined {
     if (this.map && coordinates.length > 0) {
       const line = L.polyline(coordinates, { color }).addTo(this.map);
 
       // Optioneel: centreer de kaart op de lijn
       // this.map.fitBounds(line.getBounds());
+
+      return line;
     }
+    return undefined;
   }
 }

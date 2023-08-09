@@ -2,11 +2,8 @@ import { HttpClient } from "@angular/common/http";
 import { map, Observable } from "rxjs";
 import { LatLngTuple } from "leaflet";
 import { Config } from "../config";
-import { DisruptionsResponse } from "../model/reponse-types";
 import { Injectable } from "@angular/core";
-
-
-export type Disruptions = Array<{ type: string, niveau: string, coordinates: LatLngTuple[] }>;
+import { Disruptions, DisruptionsResponse } from "../model/disruption-types";
 
 @Injectable({
   providedIn: 'root'

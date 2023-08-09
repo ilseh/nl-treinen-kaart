@@ -3,7 +3,7 @@ import { HttpClient } from "@angular/common/http";
 import { map, Observable } from "rxjs";
 import { LatLngTuple } from "leaflet";
 import { Config } from "../config";
-import { SpoorKaartResponse } from "../model/reponse-types";
+import { SpoorKaartResponse } from "../model/disruption-types";
 
 export type SpoorKaart =  Array<{key: string, coordinates: LatLngTuple[]}>;
 @Injectable({
